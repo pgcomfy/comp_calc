@@ -134,8 +134,8 @@
         <span class="v" id="cashPct">0%</span>
         <span class="t">Lean cash</span>
       </div>
-      <input id="slider" type="range" min="-10" max="10" step="0.5" value="0">
-      <div class="ticks"><span>−10% cash</span><span>offer</span><span>+10% cash</span></div>
+      <input id="slider" type="range" min="-15" max="15" step="0.5" value="0">
+      <div class="ticks"><span>−15% cash</span><span>offer</span><span>+15% cash</span></div>
     </div>
 
     <div class="results">
@@ -152,12 +152,12 @@
     </div>
 
     <div class="res" style="margin-top:16px">
-      <div class="k"><span>Total package</span><span id="totPct">+0%</span></div>
-      <div class="big" id="totOut">$380,000</div>
-      <div class="delta flat" id="totDelta">vs. original $380,000</div>
+      <div class="k"><span>Total Annual Comp (TAC)</span><span id="totPct">+0%</span></div>
+      <div class="big" id="totOut">$230,000</div>
+      <div class="delta flat" id="totDelta">vs. original $230,000</div>
     </div>
 
-    <p class="foot">Equity adjusts piecewise: at <b>+10% cash → −25% equity</b>, at <b>−10% cash → +15% equity</b>, no change at the offer point.</p>
+    <p class="foot">Trade up to <b>15% of salary</b> either way. Cash traded <b>up</b> costs equity at a <b>2.5×</b> penalty (+15% cash → −37.5% equity); cash traded <b>down</b> earns equity at a <b>1.5×</b> reward (−15% cash → +22.5% equity). No change at the offer point.</p>
   </div>
 </div>
 
@@ -166,12 +166,15 @@
   const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
   const sign = p => (p > 0 ? '+' : '') + (Math.round(p * 10) / 10) + '%';
 
-  // Equity multiplier as a function of cash % change (c from -10 to +10).
-  // Anchors: c=+10 -> -25% equity ; c=-10 -> +15% equity ; c=0 -> 0%.
-  // Piecewise-linear: steeper penalty above the offer, gentler bonus below.
+  // Trade up to ±15% of salary. Equity moves piecewise vs. cash % change c:
+  //  - trading cash UP costs equity at a 2.5x penalty  (c=+15 -> -37.5% equity)
+  //  - trading cash DOWN earns equity at a 1.5x reward  (c=-15 -> +22.5% equity)
+  const MAX_TRADE = 15;      // max % of salary tradeable either way
+  const PENALTY   = 2.5;     // equity lost per 1% cash gained (cash up)
+  const REWARD    = 1.5;     // equity gained per 1% cash reduced (cash down)
   function equityPct(c){
-    if (c >= 0) return c * (-25 / 10);   // 0..+10 -> 0..-25
-    return c * (-15 / 10);               // -10..0 -> +15..0
+    if (c >= 0) return -PENALTY * c;   // 0..+15 -> 0..-37.5
+    return -REWARD * c;                // -15..0 -> +22.5..0
   }
 
   function render(){
@@ -182,8 +185,9 @@
 
     const base = base0 * (1 + c / 100);
     const eq   = eq0   * (1 + eqP / 100);
-    const tot0 = base0 + eq0;
-    const tot  = base + eq;
+    // Total Annual Comp = base + one year (1/4) of the total equity grant.
+    const tot0 = base0 + eq0 / 4;
+    const tot  = base + eq / 4;
     const totP = tot0 ? (tot / tot0 - 1) * 100 : 0;
 
     $('cashPct').textContent = sign(c) + ' cash';
@@ -207,6 +211,10 @@
     el.textContent = word + fmt(Math.abs(diff)).slice(1) + ' (' + sign(pct) + ')';
     el.className = 'delta ' + (diff > 0 ? 'up' : 'down');
   }
+
+  // Keep the slider range in sync with MAX_TRADE.
+  $('slider').min = -MAX_TRADE;
+  $('slider').max = MAX_TRADE;
 
   ['base','equity','slider'].forEach(id => $(id).addEventListener('input', render));
   $('reset').addEventListener('click', () => { $('slider').value = 0; render(); });
