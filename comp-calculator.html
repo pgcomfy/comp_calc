@@ -157,7 +157,7 @@
       <div class="delta flat" id="totDelta">vs. original $230,000</div>
     </div>
 
-    <p class="foot">Trade up to <b>15% of base salary</b> either way. The traded cash is valued in dollars off base: trading cash <b>down</b> adds <b>1.5×</b> that amount to comp per year; taking cash <b>up</b> subtracts <b>2.5×</b> (floored at $0). Equity shown is the full 4-year grant; TAC counts one year (¼) of it.</p>
+    <p class="foot">Trade up to <b>15% of base salary</b> either way. The traded cash is valued in dollars off base: trading cash <b>down</b> adds <b>1.5×</b> that amount to the equity grant; taking cash <b>up</b> subtracts <b>2.5×</b> (floored at $0). TAC counts one year (¼) of the total grant.</p>
   </div>
 </div>
 
@@ -182,15 +182,14 @@
 
     const cashMoved = (c / 100) * base0;               // signed $ (>0 = took cash)
     const mult      = c >= 0 ? PENALTY : REWARD;
-    const equityAdj = -mult * cashMoved;               // annual $ change to equity
+    const equityAdj = -mult * cashMoved;               // $ added to the total grant
 
-    const base     = base0 + cashMoved;
-    const annualEq = Math.max(0, eqTotal0 / 4 + equityAdj);   // floor equity at $0
-    const eqTotal  = annualEq * 4;                     // shown as the full 4-yr grant
+    const base    = base0 + cashMoved;
+    const eqTotal = Math.max(0, eqTotal0 + equityAdj); // new total grant, floored at $0
 
     // Total Annual Comp = base + one year (1/4) of the total equity grant.
     const tot0 = base0 + eqTotal0 / 4;
-    const tot  = base  + annualEq;
+    const tot  = base  + eqTotal / 4;
 
     const eqP  = eqTotal0 ? (eqTotal / eqTotal0 - 1) * 100 : 0;
     const totP = tot0     ? (tot / tot0 - 1) * 100 : 0;
