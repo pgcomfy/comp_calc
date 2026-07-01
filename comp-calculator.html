@@ -145,8 +145,8 @@
         <div class="delta flat" id="baseDelta">no change</div>
       </div>
       <div class="res equity">
-        <div class="k"><span>Annual equity (¼ grant)</span><span id="eqPct">+0%</span></div>
-        <div class="big" id="eqOut">$50,000</div>
+        <div class="k"><span>Total equity</span><span id="eqPct">+0%</span></div>
+        <div class="big" id="eqOut">$200,000</div>
         <div class="delta flat" id="eqDelta">no change</div>
       </div>
     </div>
@@ -157,7 +157,7 @@
       <div class="delta flat" id="totDelta">vs. original $230,000</div>
     </div>
 
-    <p class="foot">Trade up to <b>15% of base salary</b> either way. The traded cash is valued in dollars off base: trading cash <b>down</b> adds <b>1.5×</b> that amount to annual equity; taking cash <b>up</b> subtracts <b>2.5×</b> that amount (floored at $0). Equity shown is annual (¼ of the total grant).</p>
+    <p class="foot">Trade up to <b>15% of base salary</b> either way. The traded cash is valued in dollars off base: trading cash <b>down</b> adds <b>1.5×</b> that amount to comp per year; taking cash <b>up</b> subtracts <b>2.5×</b> (floored at $0). Equity shown is the full 4-year grant; TAC counts one year (¼) of it.</p>
   </div>
 </div>
 
@@ -180,31 +180,32 @@
     const eqTotal0  = parseFloat($('equity').value) || 0;
     const c         = parseFloat($('slider').value);   // signed % of base traded
 
-    const annualEq0 = eqTotal0 / 4;
     const cashMoved = (c / 100) * base0;               // signed $ (>0 = took cash)
     const mult      = c >= 0 ? PENALTY : REWARD;
-    const equityAdj = -mult * cashMoved;               // >0 when giving cash, <0 when taking
+    const equityAdj = -mult * cashMoved;               // annual $ change to equity
 
     const base     = base0 + cashMoved;
-    const annualEq = Math.max(0, annualEq0 + equityAdj);   // floor equity at $0
+    const annualEq = Math.max(0, eqTotal0 / 4 + equityAdj);   // floor equity at $0
+    const eqTotal  = annualEq * 4;                     // shown as the full 4-yr grant
 
-    const tot0 = base0 + annualEq0;
+    // Total Annual Comp = base + one year (1/4) of the total equity grant.
+    const tot0 = base0 + eqTotal0 / 4;
     const tot  = base  + annualEq;
 
-    const eqP  = annualEq0 ? (annualEq / annualEq0 - 1) * 100 : 0;
-    const totP = tot0      ? (tot / tot0 - 1) * 100 : 0;
+    const eqP  = eqTotal0 ? (eqTotal / eqTotal0 - 1) * 100 : 0;
+    const totP = tot0     ? (tot / tot0 - 1) * 100 : 0;
 
     $('cashPct').textContent = sign(c) + ' cash';
     $('baseOut').textContent = fmt(base);
-    $('eqOut').textContent   = fmt(annualEq);
+    $('eqOut').textContent   = fmt(eqTotal);
     $('totOut').textContent  = fmt(tot);
 
     $('basePct').textContent = sign(c);
     $('eqPct').textContent   = sign(eqP);
     $('totPct').textContent  = sign(totP);
 
-    setDelta($('baseDelta'), base - base0,     c);
-    setDelta($('eqDelta'),   annualEq - annualEq0, eqP);
+    setDelta($('baseDelta'), base - base0,       c);
+    setDelta($('eqDelta'),   eqTotal - eqTotal0, eqP);
     $('totDelta').textContent = 'vs. original ' + fmt(tot0);
     $('totDelta').className = 'delta ' + (totP > .05 ? 'up' : totP < -.05 ? 'down' : 'flat');
   }
