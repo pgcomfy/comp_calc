@@ -109,7 +109,7 @@
   <div class="head">
     <div class="badge"><span class="dot"></span>Comp Calculator</div>
     <h1>Base &amp; Equity Trade-off</h1>
-    <p class="sub">Slide to shift the cash/equity mix. More cash trades equity at a steeper rate; taking less cash earns an equity bonus.</p>
+    <p class="sub">Slide to shift the cash/equity mix. Cash traded is valued off base salary: trading cash away earns 1.5× that amount in equity; taking extra cash costs 2.5× that amount in equity.</p>
   </div>
 
   <div class="card">
@@ -134,8 +134,8 @@
         <span class="v" id="cashPct">0%</span>
         <span class="t">Lean cash</span>
       </div>
-      <input id="slider" type="range" min="-10" max="10" step="0.5" value="0">
-      <div class="ticks"><span>−10% cash</span><span>offer</span><span>+10% cash</span></div>
+      <input id="slider" type="range" min="-15" max="15" step="0.5" value="0">
+      <div class="ticks"><span>−15% cash</span><span>offer</span><span>+15% cash</span></div>
     </div>
 
     <div class="results">
@@ -145,19 +145,19 @@
         <div class="delta flat" id="baseDelta">no change</div>
       </div>
       <div class="res equity">
-        <div class="k"><span>Equity value</span><span id="eqPct">+0%</span></div>
+        <div class="k"><span>Total equity</span><span id="eqPct">+0%</span></div>
         <div class="big" id="eqOut">$200,000</div>
         <div class="delta flat" id="eqDelta">no change</div>
       </div>
     </div>
 
     <div class="res" style="margin-top:16px">
-      <div class="k"><span>Total package</span><span id="totPct">+0%</span></div>
-      <div class="big" id="totOut">$380,000</div>
-      <div class="delta flat" id="totDelta">vs. original $380,000</div>
+      <div class="k"><span>Total Annual Comp (TAC)</span><span id="totPct">+0%</span></div>
+      <div class="big" id="totOut">$230,000</div>
+      <div class="delta flat" id="totDelta">vs. original $230,000</div>
     </div>
 
-    <p class="foot">Equity adjusts piecewise: at <b>+10% cash → −25% equity</b>, at <b>−10% cash → +15% equity</b>, no change at the offer point.</p>
+    <p class="foot">Trade up to <b>15% of base salary</b> either way. The traded cash is valued in dollars off base: trading cash <b>down</b> adds <b>1.5×</b> that amount to the equity grant; taking cash <b>up</b> subtracts <b>2.5×</b> (floored at $0). TAC counts one year (¼) of the total grant.</p>
   </div>
 </div>
 
@@ -166,37 +166,45 @@
   const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
   const sign = p => (p > 0 ? '+' : '') + (Math.round(p * 10) / 10) + '%';
 
-  // Equity multiplier as a function of cash % change (c from -10 to +10).
-  // Anchors: c=+10 -> -25% equity ; c=-10 -> +15% equity ; c=0 -> 0%.
-  // Piecewise-linear: steeper penalty above the offer, gentler bonus below.
-  function equityPct(c){
-    if (c >= 0) return c * (-25 / 10);   // 0..+10 -> 0..-25
-    return c * (-15 / 10);               // -10..0 -> +15..0
-  }
+  // Trade up to ±15% of BASE salary. The traded cash is a dollar amount
+  // (cash% * base). Equity moves by a multiple of those dollars, applied to
+  // the annual (1/4) equity:
+  //  - trading cash DOWN adds 1.5x the traded cash to annual equity (reward)
+  //  - taking cash UP subtracts 2.5x the traded cash from annual equity (penalty)
+  const MAX_TRADE = 15;      // max % of base tradeable either way
+  const PENALTY   = 2.5;     // equity lost per $1 of cash taken (cash up)
+  const REWARD    = 1.5;     // equity gained per $1 of cash given up (cash down)
 
   function render(){
-    const base0 = parseFloat($('base').value) || 0;
-    const eq0   = parseFloat($('equity').value) || 0;
-    const c     = parseFloat($('slider').value);
-    const eqP   = equityPct(c);
+    const base0     = parseFloat($('base').value) || 0;
+    const eqTotal0  = parseFloat($('equity').value) || 0;
+    const c         = parseFloat($('slider').value);   // signed % of base traded
 
-    const base = base0 * (1 + c / 100);
-    const eq   = eq0   * (1 + eqP / 100);
-    const tot0 = base0 + eq0;
-    const tot  = base + eq;
-    const totP = tot0 ? (tot / tot0 - 1) * 100 : 0;
+    const cashMoved = (c / 100) * base0;               // signed $ (>0 = took cash)
+    const mult      = c >= 0 ? PENALTY : REWARD;
+    const equityAdj = -mult * cashMoved;               // $ added to the total grant
+
+    const base    = base0 + cashMoved;
+    const eqTotal = Math.max(0, eqTotal0 + equityAdj); // new total grant, floored at $0
+
+    // Total Annual Comp = base + one year (1/4) of the total equity grant.
+    const tot0 = base0 + eqTotal0 / 4;
+    const tot  = base  + eqTotal / 4;
+
+    const eqP  = eqTotal0 ? (eqTotal / eqTotal0 - 1) * 100 : 0;
+    const totP = tot0     ? (tot / tot0 - 1) * 100 : 0;
 
     $('cashPct').textContent = sign(c) + ' cash';
     $('baseOut').textContent = fmt(base);
-    $('eqOut').textContent   = fmt(eq);
+    $('eqOut').textContent   = fmt(eqTotal);
     $('totOut').textContent  = fmt(tot);
 
     $('basePct').textContent = sign(c);
     $('eqPct').textContent   = sign(eqP);
     $('totPct').textContent  = sign(totP);
 
-    setDelta($('baseDelta'), base - base0, c);
-    setDelta($('eqDelta'),   eq - eq0,    eqP);
+    setDelta($('baseDelta'), base - base0,       c);
+    setDelta($('eqDelta'),   eqTotal - eqTotal0, eqP);
     $('totDelta').textContent = 'vs. original ' + fmt(tot0);
     $('totDelta').className = 'delta ' + (totP > .05 ? 'up' : totP < -.05 ? 'down' : 'flat');
   }
@@ -207,6 +215,10 @@
     el.textContent = word + fmt(Math.abs(diff)).slice(1) + ' (' + sign(pct) + ')';
     el.className = 'delta ' + (diff > 0 ? 'up' : 'down');
   }
+
+  // Keep the slider range in sync with MAX_TRADE.
+  $('slider').min = -MAX_TRADE;
+  $('slider').max = MAX_TRADE;
 
   ['base','equity','slider'].forEach(id => $(id).addEventListener('input', render));
   $('reset').addEventListener('click', () => { $('slider').value = 0; render(); });
